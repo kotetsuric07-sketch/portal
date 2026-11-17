@@ -42,11 +42,25 @@
     if (i > 0) { try { q[decodeURIComponent(kv.slice(0, i))] = decodeURIComponent(kv.slice(i + 1)); } catch (e) {} }
   });
   var base = (q.demo === '1' && DEMO.indexOf('__') < 0) ? DEMO : EXEC;
+  /* 2026-11-17 ポータルを開くたびに枠を作り直す(枠の中の履歴を残さない)。
+     Safari が閉じたタブを戻すとき、前に開いていた「続けて入力」の画面が毎回出てしまうのを防ぐ */
   function load(again, full) {
     var s = (again && ID_RE.test(again)) ? '?again=' + encodeURIComponent(again) + (full ? '&full=1' : '') : '';
-    frame.src = base + s;
+    var f = document.createElement('iframe');
+    f.id = 'portal';
+    f.title = '森酒造場 統合ポータル';
+    f.setAttribute('allow', 'clipboard-write');
+    f.src = base + s;
+    frame.parentNode.replaceChild(f, frame);
+    frame = f;
   }
   load(q.again, false);
+  /* アドレス欄から again を消す(開き直し・ブックマーク・ホーム画面に追加で、続けて入力の画面が毎回出ないように) */
+  if (q.again) {
+    try { history.replaceState(null, '', location.pathname + (q.demo === '1' ? '?demo=1' : '')); } catch (e) {}
+  }
+  /* Safari の「戻る」などで、前の状態のまま表示されたときは、普通のポータルを開き直す */
+  window.addEventListener('pageshow', function (e) { if (e.persisted) load('', false); });
 
   function get(k) { try { return window.localStorage.getItem(k) || ''; } catch (e) { return ''; } }
   function put(k, v) { try { window.localStorage.setItem(k, v); } catch (e) {} }
